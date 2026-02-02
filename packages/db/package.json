@@ -1,0 +1,19 @@
+{
+  "name": "@ac/db",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:migrate": "NODE_OPTIONS=--import=tsx knex --knexfile knexfile.ts migrate:latest",
+    "db:rollback": "NODE_OPTIONS=--import=tsx knex --knexfile knexfile.ts migrate:rollback",
+    "db:seed": "NODE_OPTIONS=--import=tsx knex --knexfile knexfile.ts seed:run"
+  },
+  "dependencies": {
+    "knex": "^3.1.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.14",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

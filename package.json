@@ -1,0 +1,25 @@
+{
+  "name": "adamant-code-catidate-assignment",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dummy SaaS dashboard starter (Next.js + Express + Postgres/Knex).",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -ws --if-present",
+    "build": "npm run build -ws --if-present",
+    "start": "npm run start -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "lint": "npm run lint -ws --if-present",
+    "db:migrate": "npm --workspace packages/db run db:migrate",
+    "db:rollback": "npm --workspace packages/db run db:rollback",
+    "db:seed": "npm --workspace packages/db run db:seed",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module"
+}
