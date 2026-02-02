@@ -62,11 +62,17 @@ As a logged-in user of Adamant SaaS, I want to access a dedicated “Knowledge A
   - When I attempt to open the module route directly
   - Then I am denied access according to the existing app authentication behavior
 
-- **Scenario: Module has two tabs (Chatbot and Feedbacks)**
+- **Scenario: Module has two tabs (Chatbot and Knowledge Uploader)**
   - Given I am authenticated and viewing the Knowledge Assistant module
-  - Then I can see two tabs: “Chatbot” and “Feedbacks”
+  - Then I can see two tabs: “Chatbot” and “Knowledge Uploader”
   - And the “Chatbot” tab lets me ask questions
-  - And the “Feedbacks” tab lets me review feedback left on answers
+  - And the “Knowledge Uploader” tab lets authorized users upload documents into the shared knowledge base
+
+- **Scenario: Knowledge Uploader is admin-only**
+  - Given I am authenticated
+  - When I open the “Knowledge Uploader” tab
+  - Then access is allowed only for users with the `admin` role
+  - And non-admin users are blocked according to the existing app authorization behavior
 
 ---
 
@@ -89,6 +95,54 @@ As a dashboard user, I want a knowledge base to exist and be populated by ingest
   - When I ingest those JSONL documents into the knowledge base
   - Then the knowledge base becomes queryable by the chatbot using the ingested dashboard data
 
+- **Scenario: Knowledge Uploader updates the shared (global) knowledge base**
+  - Given I am an admin user
+  - When I upload new files/documents in the “Knowledge Uploader” tab
+  - Then the shared (global) knowledge base is updated (not user-specific)
+  - And newly uploaded content becomes queryable by the chatbot after ingestion completes
+
+- **Scenario: Knowledge Uploader accepts supported formats**
+  - Given I am an admin user on the “Knowledge Uploader” tab
+  - When I upload one or more files
+  - Then the system accepts at least one machine-readable document format (e.g., JSONL/NDJSON)
+  - And rejects unsupported formats with a clear validation message
+
+- **Scenario: Knowledge Uploader validates inputs (size, empties)**
+  - Given I am an admin user on the “Knowledge Uploader” tab
+  - When I attempt to upload an empty file or a file exceeding the allowed size limit
+  - Then the system rejects the upload with a clear message explaining why
+
+- **Scenario: Upload creates an ingestion job with visible lifecycle**
+  - Given I am an admin user
+  - When I upload files/documents
+  - Then the system starts an ingestion job
+  - And I can see the job status in the UI (at least: pending/running/succeeded/failed)
+  - And if failed, I can see a human-readable failure reason
+
+- **Scenario: JSONL parsing is safe and debuggable**
+  - Given I upload a JSONL file
+  - When the file contains malformed JSON lines
+  - Then the system handles it safely (consistent behavior: fail the job or skip invalid lines)
+  - And it reports which lines failed and why (at least line number + error message)
+
+- **Scenario: Each ingested document preserves source metadata**
+  - Given I upload a valid document bundle
+  - When ingestion completes
+  - Then each stored document includes metadata that can trace it back to its origin (e.g., filename, module/type, source_id, timestamps)
+  - And that metadata can be used to show citations/source references in the chatbot
+
+- **Scenario: Repeated uploads update without uncontrolled duplication**
+  - Given I upload the same file/bundle more than once
+  - When ingestion completes
+  - Then the system applies a consistent strategy (dedupe/update/replace) rather than silently creating unlimited duplicates
+  - And the UI or logs indicate what happened (e.g., inserted/updated/skipped counts)
+
+- **Scenario: New uploads become available to the chatbot only after ingestion completes**
+  - Given I upload new documents
+  - When ingestion is still running
+  - Then chatbot answers should not claim to use the new content unless it is fully ingested
+  - And once ingestion succeeds, the chatbot can answer questions using the newly uploaded content
+
 ---
 
 ### Story: Ask questions against a knowledge base and see answers with source references
@@ -96,18 +150,18 @@ As a dashboard user, I want a knowledge base to exist and be populated by ingest
 - **Design story**: no
 
 #### Description
-As a dashboard user, I want to ask questions against a selected knowledge base and receive answers with source references, so that I can trust where the information came from.
+As a dashboard user, I want to ask questions against the shared (global) knowledge base and receive answers with source references, so that I can trust where the information came from.
 
 #### Acceptance criteria
 - **Scenario: Ask a question with a ready knowledge base**
   - Given I am on the Knowledge Assistant module
-  - When I submit a question that should be present in the knowledge base
+  - When I submit a question that should be present in the shared (global) knowledge base
   - Then I receive an answer
   - And the answer includes references to the underlying sources used (at least document-level references)
 
 - **Scenario: Ask a question with no ingested content**
   - Given I am on the Knowledge Assistant module
-  - When I submit a question that is not present in the knowledge base
+  - When I submit a question that is not present in the shared (global) knowledge base
   - Then the system informs me that it cannot answer from that knowledge base
   - And it provides a clear next step (e.g., ingest sources or select a different knowledge base)
 
@@ -128,10 +182,31 @@ As a dashboard user, I want conversation history and traceability of answers, so
 
 #### Acceptance criteria
 - **Scenario: View conversation history**
-  - Given I have asked at least one question in a knowledge base
+  - Given I am authenticated
   - When I return to the Knowledge Assistant module later
-  - Then I can see prior conversations for that knowledge base
+  - Then I can see my prior conversations (conversations are per user)
   - And I can open a conversation to view its messages in chronological order
+
+- **Scenario: List and continue conversations**
+  - Given I am authenticated
+  - When I view the conversation list
+  - Then I can see a list of my previous conversations
+  - And I can select one to continue the conversation
+
+- **Scenario: Delete conversations**
+  - Given I am authenticated and a conversation exists
+  - When I delete the conversation
+  - Then it is removed from my conversation list
+
+- **Scenario: Rename conversations**
+  - Given I am authenticated and a conversation exists
+  - When I rename the conversation
+  - Then the updated name is saved and shown in the conversation list
+
+- **Scenario: Automatically create a conversation name**
+  - Given I start a new conversation
+  - When I send my first message
+  - Then the system automatically generates a conversation name (e.g., based on the first message)
 
 - **Scenario: Traceability per answer**
   - Given an answer was generated using sources
@@ -140,35 +215,3 @@ As a dashboard user, I want conversation history and traceability of answers, so
   - And each reference can be mapped back to its originating module and entry via stored metadata
 
 ---
-
-### Story: Capture feedback on answers
-- **Priority**: normal
-- **Design story**: no
-
-#### Description
-As a dashboard user, I want to rate answers and optionally add feedback, so that answer quality can be reviewed and improved.
-
-#### Acceptance criteria
-- **Scenario: Submit a rating**
-  - Given an answer is displayed
-  - When I provide a positive or negative rating
-  - Then the rating is saved and linked to the answer
-  - And the UI reflects my submitted rating
-
-- **Scenario: Optional feedback detail**
-  - Given I am submitting feedback
-  - When I provide an optional reason and/or comment
-  - Then it is saved with the feedback
-  - And it is visible when viewing the answer details
-
-- **Scenario: Update existing feedback**
-  - Given I have already submitted feedback for an answer
-  - When I submit feedback again for the same answer
-  - Then the system applies one consistent behavior: it updates the existing feedback or blocks duplicates with a clear message
-  - And the UI reflects the stored final state
-
-- **Scenario: Feedback submission failure**
-  - Given the system cannot save feedback due to an error
-  - When I submit feedback
-  - Then I see a clear error message
-  - And the UI does not incorrectly show feedback as saved
