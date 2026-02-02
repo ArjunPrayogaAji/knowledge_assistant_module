@@ -1,45 +1,26 @@
-# Assignment Brief: AI Copilot Module (RAG Knowledge Base)
+# Assignment Brief: Knowledge Assistant Module (RAG Knowledge Base)
 
-You’re joining an existing dummy SaaS dashboard codebase (Next.js + Express + PostgreSQL/Knex) and implementing a new module under:
-
-- `/dashboard/ai/copilot`
+You’re joining an existing dummy SaaS dashboard codebase (Next.js + Express + PostgreSQL/Knex) and implementing a new module called “Knowledge Assistant” on that dashboard.
 
 The dashboard shell, auth, and existing CRUD patterns already exist. Your job is to add a production-style feature that demonstrates frontend, backend, DB, and AI integration.
 
 ## Goal
-Build a “Knowledge Base Copilot” that lets a user:
+Build a “Knowledge Assistant” that lets a user:
 - Create a knowledge base
 - Ingest documents into it (async job)
 - Chat with an assistant that answers using RAG
 - Show citations / traceability
-- Capture feedback (thumbs up/down + optional reason/comment)
 
 ## Core user flows
-- **Knowledge Bases**: create/list KBs, view KB detail (tabs recommended: Documents, Chat, Feedback)
-- **Document ingestion**: upload text/markdown (PDF/URL optional), chunk + embed + store; ingestion should return a `job_id` and expose a status endpoint
-- **RAG chat (streaming)**: stream assistant output to the browser; retrieve top-k chunks and generate a grounded answer
-- **Citations + traceability**: for each assistant message, store/display retrieved chunk IDs + doc names (quotes optional)
-- **Feedback**: store thumbs up/down per assistant message, tied to KB + conversation/message
-
-## Output format requirements (AI)
-Use structured outputs / tool calling so the model returns a strict JSON object with at least:
-- `answer: string`
-- `citations: Array<{ chunk_id: string; doc_id: string; quote?: string }>`
-- `confidence?: "low" | "medium" | "high"` (or a numeric score)
-
-## Technical requirements
-- **Frontend**: loading/empty/error states, accessible forms, sensible UX
-- **Backend**: endpoints for KB CRUD, upload+job creation, job status, chat (streaming), feedback; validate input and return consistent errors
-- **Database**: migrations for tables such as `knowledge_bases`, `documents`, `chunks`, `conversations`, `messages`, `message_citations`, `feedback`, `jobs`; add sensible indexes and constraints
-- **Security basics**: include at least one explicit prompt-injection mitigation (treat retrieved text as untrusted; isolate instructions vs data; validate structured outputs)
+- **Chatbot (conversations per user)**: ChatGPT-style chat UI with a conversation list/history; continue, delete, rename conversations; auto-generate conversation names
+- **Knowledge Uploader (global/shared knowledge base)**: admin-only document upload flow that ingests documents into a single shared vector database; each upload updates the shared knowledge base; ingestion should return a `job_id` and the ingestion job status
+- **RAG chat (streaming)**: stream assistant output to the browser; retrieve top-k chunks and generate a grounded answer from the shared knowledge base
+- **Citations + traceability**: for each assistant message, store/display source references that map back to ingested documents and original module/item metadata
 
 ## Deliverables
-- Working Copilot module reachable from the sidebar
-- Migrations + seed data for a demo
-- README updates describing setup, usage, and key tradeoffs
-- Tests (pick one): 1–2 backend integration tests OR 1–2 frontend component tests
-
----
+- Working Knowledge Assistant module reachable from the sidebar
+- Feature which is fully functional by just running `docker compose up`
+- README updates if needed
 
 ## Epic: Adamant SaaS — Knowledge Assistant Module
 
