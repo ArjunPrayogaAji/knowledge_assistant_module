@@ -10,9 +10,42 @@ services:
     volumes:
       - ac_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ac_dev"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d ac_dev" ]
       interval: 2s
       timeout: 3s
+      retries: 30
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - ac_qdrant_data:/qdrant/storage
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rag:
+    build:
+      context: .
+      dockerfile: apps/rag/Dockerfile
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      QDRANT_URL: http://qdrant:6333
+      DATABASE_URL: postgres://postgres:postgres@db:5432/ac_dev
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
       retries: 30
 
   api:
@@ -26,10 +59,13 @@ services:
       PASSWORD_SALT: dev_salt_change_me
       SESSION_SECRET: dev_session_secret_change_me
       CORS_ORIGIN: http://localhost:3000
+      RAG_SERVICE_URL: http://rag:8000
     ports:
       - "4000:4000"
     depends_on:
       db:
+        condition: service_healthy
+      rag:
         condition: service_healthy
     volumes:
       - ./:/app
@@ -54,3 +90,4 @@ services:
 
 volumes:
   ac_db_data:
+  ac_qdrant_data:

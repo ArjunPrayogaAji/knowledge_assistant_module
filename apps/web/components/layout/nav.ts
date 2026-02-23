@@ -8,6 +8,7 @@ import {
   Flag,
   HeadphonesIcon,
   LayoutDashboard,
+  MessageCircle,
   ScrollText,
   Settings,
   Shield,
@@ -55,6 +56,12 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "Feature Flags", href: "/dashboard/knowledge/feature-flags", icon: Flag },
       { label: "Analytics Events", href: "/dashboard/knowledge/analytics-events", icon: BarChart3 }
+    ]
+  },
+  {
+    label: "Assistant",
+    items: [
+      { label: "Knowledge Assistant", href: "/dashboard/knowledge-assistant", icon: MessageCircle }
     ]
   },
   {
