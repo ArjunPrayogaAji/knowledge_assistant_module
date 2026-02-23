@@ -3,7 +3,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { createKnex } from "./db/knex.js";
-import { attachDb } from "./middleware/auth.js";
+import { attachDb, requireAuth } from "./middleware/auth.js";
 import { toErrorResponse } from "./lib/errors.js";
 import { authRouter } from "./routes/auth.js";
 import { projectsRouter } from "./routes/projects.js";
@@ -13,6 +13,7 @@ import { adminUsersRouter } from "./routes/adminUsers.js";
 import { settingsRouter } from "./routes/settings.js";
 import { knowledgeRouter } from "./routes/knowledge.js";
 import { exportsRouter } from "./routes/exports.js";
+import { knowledgeAssistantRouter } from "./routes/knowledgeAssistant.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 
@@ -43,6 +44,7 @@ app.use("/admin/users", adminUsersRouter);
 app.use("/settings", settingsRouter);
 app.use("/knowledge", knowledgeRouter);
 app.use("/exports", exportsRouter);
+app.use("/knowledge-assistant", requireAuth, knowledgeAssistantRouter);
 
 // Error handler
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

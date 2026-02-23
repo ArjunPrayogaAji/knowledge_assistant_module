@@ -4,6 +4,7 @@ node_modules/
 # Environment
 .env
 .env.local
+env.example
 
 # Build outputs
 dist/
@@ -29,4 +30,6 @@ apps/rag/.venv/
 communication_document.md
 testing_checklist.md
 CONTEXT.md
-test.jsonl
+
+# File
+*.jsonl
