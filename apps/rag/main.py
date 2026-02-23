@@ -192,9 +192,9 @@ app = FastAPI(title="Knowledge Assistant RAG Service", lifespan=lifespan)
 
 
 class IngestLine(BaseModel):
-    content: str
-    source_id: str
-    module: str
+    content: str = ""
+    source_id: str = ""
+    module: str = "general"
     model_config = {"extra": "allow"}  # accept any additional fields from the JSONL
 
 
@@ -247,35 +247,46 @@ async def ingest(req: IngestRequest) -> IngestResponse:
     all_chunks: list[tuple[str, str, str, dict[str, Any]]] = []
 
     for line in req.lines:
-        parent_key = f"{line.source_id}:parent"
+        # Pydantic extra fields are available in model_dump()
+        data = line.model_dump()
+
+        # Handle legacy field mapping: body -> content, id -> source_id, type -> module
+        content = data.get("content") or data.get("body") or data.get("title") or ""
+        source_id = data.get("source_id") or data.get("id") or str(uuid.uuid4())
+        module = data.get("module") or data.get("type") or "general"
+
+        if not content:
+            continue  # Skip lines that totally lack content
+
+        parent_key = f"{source_id}:parent"
         parent_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, parent_key))
-        parent_hash = sha256(line.content)
+        parent_hash = sha256(content)
 
         parent_payload: dict[str, Any] = {
-            "content": line.content,
+            "content": content,
             "content_hash": parent_hash,
-            "source_id": line.source_id,
+            "source_id": source_id,
             "filename": req.filename,
-            "module": line.module,
+            "module": module,
             "chunk_type": "parent",
             "parent_id": None,
             "ingested_at": now,
             "job_id": req.job_id,
         }
-        all_chunks.append((parent_id, parent_hash, line.content, parent_payload))
+        all_chunks.append((parent_id, parent_hash, content, parent_payload))
 
-        children = create_child_chunks(line.content)
+        children = create_child_chunks(content)
         for idx, child_text in enumerate(children):
-            child_key = f"{line.source_id}:child:{idx}"
+            child_key = f"{source_id}:child:{idx}"
             child_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, child_key))
             child_hash = sha256(child_text)
 
             child_payload: dict[str, Any] = {
                 "content": child_text,
                 "content_hash": child_hash,
-                "source_id": line.source_id,
+                "source_id": source_id,
                 "filename": req.filename,
-                "module": line.module,
+                "module": module,
                 "chunk_type": "child",
                 "parent_id": parent_id,
                 "ingested_at": now,

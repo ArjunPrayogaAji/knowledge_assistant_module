@@ -52,15 +52,30 @@ function parseJsonlBuffer(buffer: Buffer): { lines: ParsedLine[]; malformed: Mal
         .forEach((text, idx) => {
             if (!text) return; // skip blank lines
             try {
-                const obj = JSON.parse(text);
-                if (!obj.content || !obj.source_id || !obj.module) {
+                const obj = JSON.parse(text) as Record<string, unknown>;
+                // Normalise legacy export fields: body→content, id→source_id, type→module
+                const content =
+                    (obj.content as string | undefined) ||
+                    (obj.body as string | undefined) ||
+                    (obj.title as string | undefined) ||
+                    "";
+                const source_id =
+                    (obj.source_id as string | undefined) ||
+                    (obj.id as string | undefined) ||
+                    "";
+                const module =
+                    (obj.module as string | undefined) ||
+                    (obj.type as string | undefined) ||
+                    "general";
+
+                if (!content || !source_id) {
                     malformed.push({
                         line: idx + 1,
-                        reason: "Missing required fields: content, source_id, module"
+                        reason: "Missing required fields: content (or body/title), source_id (or id)"
                     });
                     return;
                 }
-                lines.push(obj as ParsedLine);
+                lines.push({ ...obj, content, source_id, module } as ParsedLine);
             } catch {
                 malformed.push({ line: idx + 1, reason: "Invalid JSON" });
             }
