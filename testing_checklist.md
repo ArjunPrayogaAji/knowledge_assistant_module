@@ -481,76 +481,76 @@
 ## Milestone 8 — Cold Start & 22 Scenario Verification
 
 ### Cold Start
-- [ ] Full cold start sequence
+- [x] Full cold start sequence
   ```bash
   docker compose down -v
   docker compose up
   # Tunggu semua service healthy
   ```
-- [ ] 4 new PostgreSQL tables exist
+- [x] 4 new PostgreSQL tables exist
   ```bash
   docker exec -it adamant-code-candidate-assignment-db-1 psql -U postgres -d ac_dev -c "\dt"
   # Harus ada: conversations, messages, message_sources, ingestion_jobs
   ```
-- [ ] Qdrant collection created on first ingest
+- [x] Qdrant collection created on first ingest
   ```bash
   # Upload file via UI, lalu:
   curl http://localhost:6333/collections/document_chunks
   # Expected: status green, points_count > 0
   ```
-- [ ] `GOOGLE_API_KEY` available in rag container
+- [x] `GOOGLE_API_KEY` available in rag container
   ```bash
   docker exec adamant-code-candidate-assignment-rag-1 env | grep GOOGLE
   ```
 
 ### Feature 1 — Navigation (4 scenarios)
-- [ ] Authenticated user sees "Knowledge Assistant" in sidebar
+- [x] Authenticated user sees "Knowledge Assistant" in sidebar
   ```
   Login → cek sidebar kiri → harus ada link "Knowledge Assistant"
   ```
-- [ ] Unauthenticated user is redirected to login
+- [x] Unauthenticated user is redirected to login
   ```
   Buka http://localhost:3000/dashboard/knowledge-assistant tanpa login
   Harus redirect ke /login
   ```
-- [ ] Page has two tabs: Chatbot and Knowledge Uploader
+- [x] Page has two tabs: Chatbot and Knowledge Uploader
   ```
   Login → buka Knowledge Assistant → harus ada 2 tab
   ```
-- [ ] Non-admin user sees 403 on Knowledge Uploader tab
+- [x] Non-admin user sees 403 on Knowledge Uploader tab
   ```
   Login sebagai non-admin → klik tab Knowledge Uploader → harus tampil 403 panel
   ```
 
 ### Feature 2 — Knowledge Uploader / Ingestion (9 scenarios)
-- [ ] Valid JSONL upload → job created, ingestion succeeds
-- [ ] Non-JSONL file → rejected with clear message
-- [ ] Empty file → rejected with clear message
-- [ ] File > 10MB → rejected with clear message
-- [ ] Job status visible: pending → running → succeeded
-- [ ] Failed job → human-readable error reason shown
-- [ ] Malformed JSONL lines → skipped, line number + reason recorded
-- [ ] Re-upload same file → 0 inserted, all skipped
-- [ ] New content queryable only after status = succeeded
+- [x] Valid JSONL upload → job created, ingestion succeeds
+- [x] Non-JSONL file → rejected with clear message
+- [x] Empty file → rejected with clear message
+- [x] File > 10MB → rejected with clear message
+- [x] Job status visible: pending → running → succeeded
+- [x] Failed job → human-readable error reason shown
+- [x] Malformed JSONL lines → skipped, line number + reason recorded
+- [x] Re-upload same file → 0 inserted, all skipped
+- [x] New content queryable only after status = succeeded
   ```
   Semua scenario di atas ditest via UI Knowledge Uploader
   Lihat langkah detail di Milestone 7
   ```
 
 ### Feature 3 — Chatbot / RAG (3 scenarios)
-- [ ] Query against ingested content → grounded answer with citations
+- [x] Query against ingested content → grounded answer with citations
   ```
   Upload dokumen dulu, tunggu succeeded
   Kirim query yang relevan dengan konten dokumen
   Response harus spesifik + ada citations
   ```
-- [ ] Query against empty KB → clear message, no hallucination
+- [x] Query against empty KB → clear message, no hallucination
   ```bash
   docker compose down -v && docker compose up
   # Tanpa upload apapun, kirim query di chatbot
   # Harus ada pesan jelas bahwa KB kosong
   ```
-- [ ] LLM/vector DB error → clear error shown, no partial answer stored
+- [x] LLM/vector DB error → clear error shown, no partial answer stored
   ```bash
   # Stop rag container saat streaming
   docker stop adamant-code-candidate-assignment-rag-1
@@ -562,30 +562,30 @@
   ```
 
 ### Feature 4 — Conversation Management (6 scenarios)
-- [ ] Conversation list visible on return to page
+- [x] Conversation list visible on return to page
   ```
   Chat beberapa pesan → refresh halaman
   Conversation harus masih ada di list
   ```
-- [ ] Previous conversation can be opened and continued
+- [x] Previous conversation can be opened and continued
   ```
   Klik conversation lama → history muncul → kirim pesan baru → berhasil
   ```
-- [ ] Conversation can be deleted
+- [x] Conversation can be deleted
   ```
   Delete conversation → hilang dari list → refresh → tetap hilang
   ```
-- [ ] Conversation can be renamed and name persists
+- [x] Conversation can be renamed and name persists
   ```
   Rename → refresh → nama baru masih ada
   ```
-- [ ] First message auto-generates conversation name
+- [x] First message auto-generates conversation name
   ```
   Buat conversation baru (name kosong)
   Kirim pesan pertama, tunggu response selesai
   Lihat list — nama conversation harus ter-generate otomatis
   ```
-- [ ] Each assistant message has source references stored in DB
+- [x] Each assistant message has source references stored in DB
   ```bash
   docker exec -it adamant-code-candidate-assignment-db-1 psql -U postgres -d ac_dev \
     -c "SELECT ms.* FROM message_sources ms JOIN messages m ON ms.message_id = m.id WHERE m.role = 'assistant' LIMIT 5;"

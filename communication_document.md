@@ -2,7 +2,6 @@
 ## Knowledge Assistant — Adamant SaaS
 
 > This file documents every technical decision made per milestone: what changed, why, and how it compares to alternatives.
-> **Never delete previous entries. Always append.**
 
 ---
 
