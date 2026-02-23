@@ -1,20 +1,32 @@
-node_modules
-.next
-dist
-build
-.turbo
-.DS_Store
+# Dependencies
+node_modules/
 
+# Environment
 .env
 .env.local
 
-coverage
+# Build outputs
+dist/
+build/
+.next/
+.turbo/
 
-node_modules
-.next
-.env
-.env.local
-dist
-build
-coverage
+# Coverage
+coverage/
+
+# Python
+apps/rag/__pycache__/
+apps/rag/*.pyc
+apps/rag/.venv/
+
+# OS
 .DS_Store
+
+# Logs
+*.log
+
+# Management
+communication_document.md
+testing_checklist.md
+CONTEXT.md
+test.jsonl

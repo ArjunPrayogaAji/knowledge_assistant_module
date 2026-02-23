@@ -22,10 +22,11 @@ services:
     volumes:
       - ac_qdrant_data:/qdrant/storage
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:6333/readyz || exit 1" ]
+      # Pakai /dev/tcp buat ngecek port terbuka tanpa butuh curl/nc/wget
+      test: [ "CMD-SHELL", "timeout 1s bash -c ': </dev/tcp/127.0.0.1/6333' || exit 1" ]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 10
 
   rag:
     build:
@@ -43,10 +44,10 @@ services:
       qdrant:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1" ]
+      test: [ "CMD-SHELL", "timeout 1s bash -c ': </dev/tcp/127.0.0.1/8000' || exit 1" ]
       interval: 5s
       timeout: 5s
-      retries: 30
+      retries: 10
 
   api:
     build:
