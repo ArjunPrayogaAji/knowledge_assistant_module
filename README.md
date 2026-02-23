@@ -204,6 +204,24 @@ cd apps/api
 npm test
 ```
 
+## Development Process & Documentation
+
+This application was developed following the requirements and architectural guidelines outlined in [CONTEXT.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/CONTEXT.md) and verified against [testing_checklist.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/testing_checklist.md).
+
+### Key Process Documents
+
+- **[communication_document.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/communication_document.md)**: Contains a detailed summarization of activities performed during each development milestone, including rationale for key technical decisions.
+- **[CONTEXT.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/CONTEXT.md)**: The foundational document used to guide the development and implementation of the AI features.
+- **[testing_checklist.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/testing_checklist.md)**: The checklist used to ensure all features meet the required functional and quality standards.
+
+### Scenario Testing Folder
+
+The [`scenario-testing/`](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/scenario-testing) folder provides evidence of the implementation's correctness and a summary of the agentic development process:
+
+- **[agent_summary.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/scenario-testing/agent_summary.md)**: A high-level summary of the AI agent's activities and contributions.
+- **[scenario_testing_results.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/scenario-testing/scenario_testing_results.md)**: Detailed results from manual and automated testing scenarios.
+- **[walkthrough.md](file:///Users/mac-tft-arjun/AdamantCode/Adamant-Code-Candidate-Assignment/scenario-testing/walkthrough.md)**: A step-by-step visual and descriptive guide of the implemented features and their usage.
+
 ## License
 
 ISC

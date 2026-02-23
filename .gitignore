@@ -17,7 +17,6 @@ coverage/
 
 # Folder
 testing-folder/
-scenario-testing/
 
 # Python
 apps/rag/__pycache__/
@@ -31,9 +30,6 @@ apps/rag/.venv/
 *.log
 
 # Management
-communication_document.md
-testing_checklist.md
-CONTEXT.md
 
 # File
 *.jsonl
