@@ -13,6 +13,11 @@ import {
   ChevronRight,
   MessageSquare,
   Loader2,
+  UploadCloud,
+  FileText,
+  XCircle,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,6 +47,24 @@ type Message = {
   content: string;
   created_at: string;
   sources?: Source[];
+};
+
+type IngestionJob = {
+  id: string;
+  status: "pending" | "running" | "succeeded" | "failed";
+  filename: string;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  error_details:
+  | null
+  | {
+    malformed_lines?: { line: number; reason: string }[];
+    rag_error?: string;
+    message?: string;
+  };
+  created_at: string;
+  updated_at: string;
 };
 
 type Citation = {
@@ -680,22 +703,290 @@ function ForbiddenPanel() {
   );
 }
 
-// ─── UploaderPanel (stub — Milestone 7) ──────────────────────────────────────
+// ─── UploaderPanel ────────────────────────────────────────────────────────────
+
+const MAX_BYTES = 10 * 1024 * 1024;
+const VALID_EXTS = ["jsonl", "ndjson"];
+
+function validateFile(f: File): string | null {
+  const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+  if (!VALID_EXTS.includes(ext)) return "Only .jsonl or .ndjson files are accepted.";
+  if (f.size === 0) return "File is empty.";
+  if (f.size > MAX_BYTES) return "File exceeds 10 MB limit.";
+  return null;
+}
+
+function StatusBadge({ status }: { status: IngestionJob["status"] }) {
+  const map = {
+    pending: { cls: "bg-slate-100 text-slate-600", label: "Pending", Icon: Loader2, spin: false },
+    running: { cls: "bg-blue-50 text-blue-700", label: "Running", Icon: Loader2, spin: true },
+    succeeded: { cls: "bg-green-50 text-green-700", label: "Succeeded", Icon: CheckCircle2, spin: false },
+    failed: { cls: "bg-red-50 text-red-700", label: "Failed", Icon: AlertCircle, spin: false },
+  };
+  const { cls, label, Icon, spin } = map[status];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${cls}`}>
+      <Icon className={`h-3.5 w-3.5 ${spin ? "animate-spin" : ""}`} />
+      {label}
+    </span>
+  );
+}
 
 function UploaderPanel() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [job, setJob] = useState<IngestionJob | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Polling ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!job) return;
+    if (job.status === "succeeded" || job.status === "failed") {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(async () => {
+      try {
+        const d = await apiFetch<{ job: IngestionJob }>(`/knowledge-assistant/jobs/${job.id}`);
+        setJob(d.job);
+      } catch {
+        // silently ignore transient poll errors
+      }
+    }, 3000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [job?.id, job?.status]);
+
+  // ── File selection ─────────────────────────────────────────────────────────
+  function handleFiles(files: FileList | null) {
+    setUploadError(null);
+    setJob(null);
+    const f = files?.[0];
+    if (!f) return;
+    const err = validateFile(f);
+    if (err) {
+      setValidationError(err);
+      setFile(null);
+    } else {
+      setValidationError(null);
+      setFile(f);
+    }
+  }
+
+  // ── Upload ─────────────────────────────────────────────────────────────────
+  async function handleUpload() {
+    if (!file || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const resp = await fetch(`${apiBaseUrl()}/knowledge-assistant/upload`, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+      const json = await resp.json() as { job_id?: string; error?: { message?: string } };
+      if (!resp.ok) {
+        throw new Error(json.error?.message ?? `Upload failed (${resp.status})`);
+      }
+      // Seed initial job state so the panel renders immediately
+      setJob({
+        id: json.job_id!,
+        status: "pending",
+        filename: file.name,
+        inserted: 0, updated: 0, skipped: 0,
+        error_details: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function reset() {
+    setFile(null);
+    setValidationError(null);
+    setUploadError(null);
+    setJob(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4 text-center text-slate-500">
-      <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-2xl">
-        📤
-      </div>
+    <div className="p-6 flex flex-col gap-6 max-w-2xl mx-auto">
       <div>
-        <div className="text-base font-semibold text-slate-700">
-          Knowledge Uploader
-        </div>
-        <div className="mt-1 text-sm text-slate-400">
-          Upload UI coming in Milestone 7.
-        </div>
+        <h2 className="text-base font-semibold text-slate-900">Knowledge Uploader</h2>
+        <p className="mt-0.5 text-sm text-slate-500">
+          Upload a JSONL / NDJSON file. Each line must have <code className="font-mono text-xs bg-slate-100 px-1 rounded">content</code>,{" "}
+          <code className="font-mono text-xs bg-slate-100 px-1 rounded">source_id</code>, and{" "}
+          <code className="font-mono text-xs bg-slate-100 px-1 rounded">module</code> fields.
+        </p>
       </div>
+
+      {/* Drop zone */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}
+        className={cx(
+          "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors select-none",
+          isDragging ? "border-slate-400 bg-slate-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+        )}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".jsonl,.ndjson"
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+        {file ? (
+          <>
+            <FileText className="h-8 w-8 text-slate-400" />
+            <div className="text-center">
+              <div className="text-sm font-medium text-slate-700 truncate max-w-xs">{file.name}</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {(file.size / 1024).toFixed(1)} KB
+              </div>
+            </div>
+            <span className="text-xs text-slate-400">Click to choose a different file</span>
+          </>
+        ) : (
+          <>
+            <UploadCloud className="h-8 w-8 text-slate-300" />
+            <div className="text-center">
+              <div className="text-sm font-medium text-slate-700">Drop a file here or click to browse</div>
+              <div className="text-xs text-slate-400 mt-0.5">.jsonl or .ndjson — max 10 MB</div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Validation error */}
+      {validationError && (
+        <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          <XCircle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">{validationError}</span>
+          <button type="button" onClick={() => setValidationError(null)} className="text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+
+      {/* Upload error */}
+      {uploadError && (
+        <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">{uploadError}</span>
+          <button type="button" onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+
+      {/* Upload button */}
+      <div className="flex gap-3">
+        <Button
+          variant="primary"
+          onClick={handleUpload}
+          disabled={!file || uploading || !!job}
+          className="flex items-center gap-2"
+        >
+          {uploading ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Uploading…</>
+          ) : (
+            <><UploadCloud className="h-4 w-4" /> Upload</>
+          )}
+        </Button>
+        {(file || job) && (
+          <Button variant="secondary" onClick={reset} disabled={uploading}>
+            Clear
+          </Button>
+        )}
+      </div>
+
+      {/* Job status panel */}
+      {job && (
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-slate-700 truncate">{job.filename}</div>
+              <div className="text-[10px] font-mono text-slate-400 mt-0.5 truncate">Job: {job.id}</div>
+            </div>
+            <StatusBadge status={job.status} />
+          </div>
+
+          {/* Counts — show once terminal */}
+          {(job.status === "succeeded" || job.status === "failed") && (
+            <div className="flex gap-4 px-4 py-3 border-b border-slate-100">
+              {([
+                { label: "Inserted", value: job.inserted, color: "text-green-700 bg-green-50" },
+                { label: "Updated", value: job.updated, color: "text-blue-700 bg-blue-50" },
+                { label: "Skipped", value: job.skipped, color: "text-slate-600 bg-slate-100" },
+              ] as const).map(({ label, value, color }) => (
+                <div key={label} className={`flex-1 rounded-lg px-3 py-2 text-center ${color}`}>
+                  <div className="text-lg font-semibold">{value}</div>
+                  <div className="text-xs">{label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Malformed lines table */}
+          {job.error_details?.malformed_lines && job.error_details.malformed_lines.length > 0 && (
+            <div className="px-4 py-3 border-b border-slate-100">
+              <div className="text-xs font-medium text-slate-500 mb-2">
+                Malformed lines ({job.error_details.malformed_lines.length})
+              </div>
+              <div className="overflow-x-auto rounded border border-slate-100">
+                <table className="w-full text-xs">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left px-3 py-1.5 font-medium text-slate-500 w-16">Line</th>
+                      <th className="text-left px-3 py-1.5 font-medium text-slate-500">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {job.error_details.malformed_lines.map((m) => (
+                      <tr key={m.line} className="border-t border-slate-100">
+                        <td className="px-3 py-1.5 font-mono text-slate-700">{m.line}</td>
+                        <td className="px-3 py-1.5 text-slate-600">{m.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* RAG / generic error message */}
+          {(job.error_details?.rag_error || job.error_details?.message) && (
+            <div className="px-4 py-3">
+              <div className="text-xs font-medium text-red-600 mb-1">Error detail</div>
+              <pre className="whitespace-pre-wrap rounded bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700 font-mono">
+                {job.error_details.rag_error ?? job.error_details.message}
+              </pre>
+            </div>
+          )}
+
+          {/* Pending / running message */}
+          {(job.status === "pending" || job.status === "running") && (
+            <div className="px-4 py-3 text-xs text-slate-400">
+              Processing… this page polls automatically every 3 seconds.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
